@@ -21,10 +21,29 @@ Addresses [pascalorg/editor#158](https://github.com/pascalorg/editor/issues/158)
   conversion (ODA / Aspose.CAD Cloud / CloudConvert) is documented in
   INTEGRATION.md as a follow-up phase. There is no permissive-license JS DWG
   parser as of 2026.
-- Door / window placement on walls. v1 emits walls only; door INSERT blocks
-  fall through to the 2D underlay until the door-attachment heuristic ships.
 - `SPLINE`, `HATCH`, `DIMENSION` entities — these are counted as
   unsupported and reported via `ImportWarning`s.
+
+## Door / window placement
+
+`placeOpenings(walls, inserts)` snaps each `INSERT` block (recognized by layer
+or block-name regex) to the nearest wall within 0.5 m perpendicular distance,
+rejecting positions inside the corner exclusion zone (`t < 0.05` or
+`t > 0.95`). Produces `DoorSpec[]` / `WindowSpec[]` with default door
+dimensions 0.9 × 2.1 m and window dimensions 1.5 × 1.5 m at sill 0.9 m.
+
+## 2D underlay
+
+`generateUnderlaySvg(lines, options?)` produces an `<svg>` string + meter-space
+metadata for the non-wall lines. `svgToDataUrl(svg)` encodes it as a
+`data:image/svg+xml;base64,...` URL ready to feed into a textured plane
+(`GuideNode` in the Pascal editor).
+
+## Multi-floor detection (helper, not yet auto-applied)
+
+`detectFloorsFromZ(zValues, options?)` clusters Z-coordinates and reports
+`{ isSingleFloor, clusters }`. Used for a future "this looks like 2 stacked
+floors" prompt. v1 imports model space to a single level.
 
 ## Usage
 

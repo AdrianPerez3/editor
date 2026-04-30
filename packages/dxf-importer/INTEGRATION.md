@@ -2,27 +2,35 @@
 
 How to wire `@pascal-app/dxf-importer` into the Pascal editor app.
 
-## Status (April 2026)
+## Status
 
-A minimal integration is now wired into the editor. Status:
+End-to-end integration is now wired. What ships in the current PR:
 
-- **Wired:** an "Import DXF / DWG" button in the Settings panel
-  (`packages/editor/src/components/ui/sidebar/panels/settings-panel/dxf-import-button.tsx`)
-  that handles file picking, DWG sniffing, DXF parsing, WallNode creation, and
-  atomic-undo grouping via `useScene.temporal.pause()/resume()`.
-- **Verified:** TypeScript check-types adds zero new errors; the
-  `@pascal-app/dxf-importer` package has 103 unit tests passing.
-- **NOT verified in browser:** the file picker, the success/error inline
-  status, the actual visual result of imported walls, the Cmd+Z grouping,
-  and large-file performance. These need browser-based smoke testing before
-  shipping.
-- **Deferred to follow-ups:**
-  - Layer-mapping table UI (today the importer auto-classifies via regex).
-  - Toast library (`sonner`) — the current integration uses inline status text.
-  - Web Worker for >5 MB DXFs.
-  - 2D underlay rendering of `result.underlay` lines as a `GuideNode`.
-  - Door / window placement on walls.
-  - Multi-floor detection (Z-clustering, sibling-file scan).
+- **Sonner toasts** — success / error / warning / info via `apps/editor/app/layout.tsx <Toaster />`. The button uses `toast.loading` → `toast.success` for the import lifecycle.
+- **Walls** — every `WallSpec` becomes a schema-valid `WallNode` attached to the active level.
+- **Doors and windows** — `placeOpenings()` snaps `INSERT` blocks to the nearest wall (≤ 0.5 m perpendicular tolerance, parametric position in [0.05, 0.95]) and produces `DoorSpec` / `WindowSpec`. The button creates `DoorNode` / `WindowNode` with `wallId` set so the wall CSG cuts the opening.
+- **2D underlay** — `generateUnderlaySvg()` rasterizes non-wall lines into an SVG, encoded as a `data:image/svg+xml;base64,...` URL and surfaced as a `GuideNode` on the level (opacity 35, scaled to bbox).
+- **Atomic undo** — every node created by an import lands in a single `useScene.temporal.pause()/resume()` block, so Ctrl/Cmd+Z reverts the whole import.
+- **DWG rejection** — files with the binary DWG magic header trigger a long-form toast pointing at the free [ODA File Converter](https://www.opendesign.com/guestfiles/oda_file_converter).
+- **Real-shaped fixtures** — `revit-metric-export.dxf`, `sketchup-imperial-quirk.dxf`, `civil3d-unitless.dxf`, `house-with-doors.dxf` exercise common exporter quirks.
+
+What's still browser-test-only (NOT verified in CI):
+
+- **Door/window rotation sign** — `rotation: [0, -wallAngleY, 0]` is our best guess. If openings render mirrored or 90° off, flip the sign.
+- **GuideNode plane scaling** — the existing `GuideNode` renderer hard-codes a 10 m wide plane scaled by aspect; we set `scale = max(width, height) / 10` as a compensating factor. May need adjustment for non-square underlays.
+- **Visual fidelity** of the SVG underlay against the actual 3D scene.
+
+Web Worker (large file offload):
+
+- `apps/editor/lib/dxf-worker.ts` and `apps/editor/lib/dxf-import-client.ts` ship a Comlink-backed worker that wraps `importDxf`.
+- Files larger than 5 MB are dispatched to the worker; smaller files parse inline.
+- **Currently unused by the button** because the button lives in `packages/editor` and cannot import from `apps/editor`. To activate: move `DxfImportButton` to `apps/editor/components/`, add an `importSlot?: ReactNode` prop to `SettingsPanelProps`, and pass it from where SettingsPanel is rendered. Worker is ready to consume.
+
+Deferred to follow-up PRs:
+
+- **Layer-mapping table UI** — interactive table letting users override regex classification per layer with savable presets. Auto-classify covers ~75-80% per research; long tail needs UX iteration.
+- **Multi-floor detection wiring** — `detectFloorsFromZ()` is exported but not invoked. Needs UX (sibling-file picker, Z-cluster prompt, alignment).
+- **Real-DXF testing** — exercise on actual Revit/AutoCAD/SketchUp exports beyond the synthetic fixtures.
 
 ## DWG handling (issue #158)
 

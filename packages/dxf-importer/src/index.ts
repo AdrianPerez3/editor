@@ -23,6 +23,20 @@ export {
   type FloorDetectionOptions,
 } from './floors.js';
 export {
+  classifyInsert,
+  placeOpenings,
+  type DoorSpec,
+  type OpeningsResult,
+  type PlaceOpeningsOptions,
+  type WindowSpec,
+} from './openings.js';
+export {
+  generateUnderlaySvg,
+  svgToDataUrl,
+  type UnderlaySvg,
+  type UnderlaySvgOptions,
+} from './underlay-svg.js';
+export {
   DEFAULT_OPTIONS,
   type DxfUnit,
   type ImportedInsert,

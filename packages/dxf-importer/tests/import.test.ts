@@ -110,4 +110,65 @@ describe('importDxf (end-to-end)', () => {
     const layerHistogram = result.stats.layersClassified;
     expect(layerHistogram.wall).toBeGreaterThan(0);
   });
+
+  it('imports a Revit metric export with AIA-prefixed layers', () => {
+    const result = importDxf(fixture('revit-metric-export.dxf'));
+    // $INSUNITS=4 -> mm via header.
+    expect(result.stats.unit).toBe('mm');
+    expect(result.stats.unitSource).toBe('header');
+    expect(result.stats.scaleToMeters).toBeCloseTo(0.001, 9);
+    // 4 segments from the closed exterior LWPOLYLINE + 1 from the interior partition.
+    expect(result.walls).toHaveLength(5);
+    // 1 door INSERT + 1 window INSERT.
+    expect(result.inserts).toHaveLength(2);
+    expect(result.stats.insertsDetected).toBe(2);
+    // All 5 declared layers should be present, plus the implicit "0" layer.
+    expect(result.stats.layersDetected).toBe(6);
+    // Bbox should be 5m x 4m in meters.
+    expect(result.stats.bbox).not.toBeNull();
+    if (!result.stats.bbox) return;
+    const dx = result.stats.bbox.max[0] - result.stats.bbox.min[0];
+    const dy = result.stats.bbox.max[1] - result.stats.bbox.min[1];
+    expect(dx).toBeCloseTo(5, 3);
+    expect(dy).toBeCloseTo(4, 3);
+  });
+
+  it('imports a SketchUp imperial export with non-AIA WALL/DOOR layers', () => {
+    const result = importDxf(fixture('sketchup-imperial-quirk.dxf'));
+    // $INSUNITS=1 -> in via header.
+    expect(result.stats.unit).toBe('in');
+    expect(result.stats.unitSource).toBe('header');
+    expect(result.stats.scaleToMeters).toBeCloseTo(0.0254, 9);
+    // 4 LINE walls forming a 480x360 inch rectangle.
+    expect(result.walls).toHaveLength(4);
+    // 1 DOOR_36 INSERT.
+    expect(result.inserts).toHaveLength(1);
+    expect(result.inserts[0]?.blockName).toBe('DOOR_36');
+    // Bbox: 480 in -> ~12.192 m, 360 in -> ~9.144 m.
+    expect(result.stats.bbox).not.toBeNull();
+    if (!result.stats.bbox) return;
+    const dx = result.stats.bbox.max[0] - result.stats.bbox.min[0];
+    const dy = result.stats.bbox.max[1] - result.stats.bbox.min[1];
+    expect(dx).toBeCloseTo(480 * 0.0254, 3);
+    expect(dy).toBeCloseTo(360 * 0.0254, 3);
+  });
+
+  it('infers mm from bbox heuristic for a unitless Civil3D-style export', () => {
+    const result = importDxf(fixture('civil3d-unitless.dxf'));
+    // $INSUNITS=0 + no $MEASUREMENT -> bbox heuristic. Max extent 8000 (>1000) -> mm.
+    expect(result.stats.unit).toBe('mm');
+    expect(result.stats.unitSource).toBe('heuristic');
+    expect(result.stats.scaleToMeters).toBeCloseTo(0.001, 9);
+    // 2 LINEs on A-WALL classified as walls; the V-ROAD line goes to underlay.
+    expect(result.walls).toHaveLength(2);
+    expect(result.stats.layersClassified.wall).toBe(2);
+    expect(result.stats.layersClassified.underlay).toBe(1);
+    // Bbox spans 6m x 8m after scaling.
+    expect(result.stats.bbox).not.toBeNull();
+    if (!result.stats.bbox) return;
+    const dx = result.stats.bbox.max[0] - result.stats.bbox.min[0];
+    const dy = result.stats.bbox.max[1] - result.stats.bbox.min[1];
+    expect(dx).toBeCloseTo(6, 3);
+    expect(dy).toBeCloseTo(8, 3);
+  });
 });
