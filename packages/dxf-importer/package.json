@@ -1,0 +1,48 @@
+{
+  "name": "@pascal-app/dxf-importer",
+  "version": "0.1.0",
+  "description": "DXF (AutoCAD) parser and floor-plan importer for the Pascal editor (issue #158)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsc --build --watch",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "dxf-parser": "^1.1.2"
+  },
+  "devDependencies": {
+    "@pascal/typescript-config": "*",
+    "@types/node": "^22.15.3",
+    "typescript": "5.9.3",
+    "vitest": "^3.1.0"
+  },
+  "keywords": [
+    "dxf",
+    "autocad",
+    "import",
+    "floor-plan",
+    "pascal-editor"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pascalorg/editor.git",
+    "directory": "packages/dxf-importer"
+  }
+}

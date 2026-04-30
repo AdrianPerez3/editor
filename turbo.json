@@ -25,6 +25,11 @@
     "check-types": {
       "dependsOn": ["^check-types"]
     },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "tests/**", "vitest.config.*", "package.json"],
+      "outputs": ["coverage/**"]
+    },
     "dev": {
       "dependsOn": ["^build"],
       "cache": false,
