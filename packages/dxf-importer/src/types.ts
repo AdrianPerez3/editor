@@ -43,6 +43,25 @@ export interface UnderlayLine {
   colorHex?: string;
 }
 
+/**
+ * A block-reference (INSERT) extracted from the DXF, surfaced as data so a
+ * future PR can place doors/windows/furniture on walls. v1 importDxf does
+ * NOT consume these — they are purely informational. Position is in
+ * editor coords (Y-flipped) and meters.
+ */
+export interface ImportedInsert {
+  blockName: string;
+  /** Insertion point in editor (X, Z) plane, meters. */
+  position: Point2D;
+  /** Z elevation in meters, useful for multi-floor detection. */
+  elevation: number;
+  /** Rotation in degrees, CCW from +X. */
+  rotation: number;
+  xScale: number;
+  yScale: number;
+  layer: string;
+}
+
 export interface ImportWarning {
   code:
     | 'unit_unspecified'
@@ -64,6 +83,7 @@ export interface ImportStats {
   totalEntities: number;
   walls: number;
   underlayLines: number;
+  insertsDetected: number;
   layersDetected: number;
   layersClassified: Record<LayerConcept, number>;
   unit: DxfUnit;
@@ -86,6 +106,7 @@ export interface ImportOptions {
 export interface ImportResult {
   walls: WallSpec[];
   underlay: UnderlayLine[];
+  inserts: ImportedInsert[];
   warnings: ImportWarning[];
   stats: ImportStats;
 }

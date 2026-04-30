@@ -44,6 +44,7 @@ describe('parseDxfText', () => {
   it('parses an empty file without crashing', () => {
     const result = parseDxfText(fixture('empty.dxf'));
     expect(result.segments).toHaveLength(0);
+    expect(result.inserts).toHaveLength(0);
     expect(result.warnings.some((w) => w.code === 'parse_error')).toBe(false);
   });
 
@@ -51,5 +52,21 @@ describe('parseDxfText', () => {
     const result = parseDxfText('this is definitely not a DXF file');
     expect(result.warnings.some((w) => w.code === 'parse_error')).toBe(true);
     expect(result.segments).toHaveLength(0);
+    expect(result.inserts).toHaveLength(0);
+  });
+
+  it('extracts INSERT entities with block name, position, rotation, and scale', () => {
+    const result = parseDxfText(fixture('house-with-doors.dxf'));
+    expect(result.inserts.length).toBeGreaterThan(0);
+    expect(result.inserts.length).toBe(5); // 3 doors + 2 windows
+    const blockNames = result.inserts.map((i) => i.blockName);
+    expect(blockNames).toContain('DOOR_900');
+    expect(blockNames).toContain('WIN_DBL_1500');
+    const layers = new Set(result.inserts.map((i) => i.layer));
+    expect(layers.has('A-DOOR')).toBe(true);
+    expect(layers.has('A-GLAZ')).toBe(true);
+    // Rotated INSERT preserves rotation degrees.
+    const rotated = result.inserts.find((i) => i.rotation === 90);
+    expect(rotated).toBeDefined();
   });
 });

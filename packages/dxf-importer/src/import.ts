@@ -1,3 +1,4 @@
+import { dxfToLevel } from './coords.js';
 import { parseDxfText } from './parse.js';
 import {
   inferUnitFromBbox,
@@ -8,6 +9,7 @@ import {
 import {
   DEFAULT_OPTIONS,
   type DxfUnit,
+  type ImportedInsert,
   type ImportOptions,
   type ImportResult,
   type ImportStats,
@@ -85,10 +87,30 @@ export function importDxf(text: string, opts: ImportOptions = {}): ImportResult 
   const layerNames = Array.from(parsed.layers.keys());
   const mapping = mapSegmentsToWalls(parsed.segments, layerNames, scaleToMeters, options);
 
+  // Convert raw INSERTs into editor coords + meters. We do NOT recenter them
+  // (their absolute positions need to stay correlated with raw entity coords;
+  // recentering walls already shifts coordinates, so a more sophisticated
+  // door/window placement step in a future PR will need to apply the same
+  // centering offset captured in mapping.bboxSourceUnits).
+  const inserts: ImportedInsert[] = parsed.inserts.map((ins) => {
+    const scaled: [number, number] = [ins.position[0] * scaleToMeters, ins.position[1] * scaleToMeters];
+    const editorPt = dxfToLevel(scaled);
+    return {
+      blockName: ins.blockName,
+      position: editorPt,
+      elevation: ins.z * scaleToMeters,
+      rotation: ins.rotation,
+      xScale: ins.xScale,
+      yScale: ins.yScale,
+      layer: ins.layer,
+    };
+  });
+
   const stats: ImportStats = {
     totalEntities: parsed.segments.length,
     walls: mapping.walls.length,
     underlayLines: mapping.underlay.length,
+    insertsDetected: inserts.length,
     layersDetected: parsed.layers.size,
     layersClassified: mapping.layersClassified,
     unit,
@@ -111,6 +133,7 @@ export function importDxf(text: string, opts: ImportOptions = {}): ImportResult 
   return {
     walls: mapping.walls,
     underlay: mapping.underlay,
+    inserts,
     warnings: [...parsed.warnings, ...mapping.warnings],
     stats,
   };

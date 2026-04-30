@@ -17,8 +17,15 @@ export {
   type FormatDetection,
 } from './dwg-guard.js';
 export {
+  detectFloorsFromZ,
+  type FloorCluster,
+  type FloorDetection,
+  type FloorDetectionOptions,
+} from './floors.js';
+export {
   DEFAULT_OPTIONS,
   type DxfUnit,
+  type ImportedInsert,
   type ImportOptions,
   type ImportResult,
   type ImportStats,

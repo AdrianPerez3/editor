@@ -23,11 +23,34 @@ export interface ParsedSegment {
   source: 'LINE' | 'LWPOLYLINE' | 'POLYLINE' | 'ARC' | 'CIRCLE';
 }
 
+/**
+ * Raw data for an INSERT (block reference) entity. Surfaced by the parser so
+ * downstream consumers can place doors, windows, or furniture on walls in a
+ * future PR. v1 walls.ts ignores these — it only consumes ParsedSegment[].
+ */
+export interface ParsedInsert {
+  /** Block name being referenced (e.g., "DOOR_36IN", "WIN_DBL"). */
+  blockName: string;
+  /** Insertion point in source units (DXF X/Y; Z dropped for 2D plans). */
+  position: Point2D;
+  /** Z elevation of the insertion point in source units (useful for multi-floor). */
+  z: number;
+  /** Rotation in degrees, CCW from +X (DXF convention). */
+  rotation: number;
+  /** X scale factor (negative = mirrored). */
+  xScale: number;
+  /** Y scale factor (negative = mirrored). */
+  yScale: number;
+  /** Layer the INSERT sits on, used for concept classification. */
+  layer: string;
+}
+
 export interface ParsedDxf {
   units: number;
   measurement: number | undefined;
   layers: Map<string, ParsedLayer>;
   segments: ParsedSegment[];
+  inserts: ParsedInsert[];
   warnings: ImportWarning[];
   raw: unknown;
 }
@@ -73,7 +96,16 @@ interface RawArc extends RawEntityCommon {
   angleLength?: number;
 }
 
-type RawEntity = RawLine | RawLwPolyline | RawArc | RawEntityCommon;
+interface RawInsert extends RawEntityCommon {
+  type: 'INSERT';
+  name?: string;
+  position?: { x: number; y: number; z?: number };
+  rotation?: number;
+  xScale?: number;
+  yScale?: number;
+}
+
+type RawEntity = RawLine | RawLwPolyline | RawArc | RawInsert | RawEntityCommon;
 
 interface RawDxf {
   header?: RawHeader;
@@ -101,6 +133,7 @@ export function parseDxfText(text: string): ParsedDxf {
       measurement: undefined,
       layers: new Map(),
       segments: [],
+      inserts: [],
       warnings: [{ code: 'parse_error', message }],
       raw: undefined,
     };
@@ -108,6 +141,7 @@ export function parseDxfText(text: string): ParsedDxf {
 
   const layers = readLayers(raw);
   const segments: ParsedSegment[] = [];
+  const inserts: ParsedInsert[] = [];
   const skippedTypes = new Map<string, number>();
   const frozenLayers = new Set<string>();
   for (const [name, l] of layers) if (l.frozen) frozenLayers.add(name);
@@ -117,7 +151,7 @@ export function parseDxfText(text: string): ParsedDxf {
     if (e.paperSpace) continue;
     const layer = e.layer ?? '0';
     if (frozenLayers.has(layer)) continue;
-    convertEntity(e, layer, segments, skippedTypes, warnings);
+    convertEntity(e, layer, segments, inserts, skippedTypes, warnings);
   }
 
   for (const [type, count] of skippedTypes) {
@@ -134,6 +168,7 @@ export function parseDxfText(text: string): ParsedDxf {
     measurement: raw.header?.$MEASUREMENT,
     layers,
     segments,
+    inserts,
     warnings,
     raw,
   };
@@ -160,6 +195,7 @@ function convertEntity(
   e: RawEntity,
   layer: string,
   segments: ParsedSegment[],
+  inserts: ParsedInsert[],
   skippedTypes: Map<string, number>,
   warnings: ImportWarning[],
 ): void {
@@ -223,6 +259,32 @@ function convertEntity(
       // Skip for now; emit underlay-only via a separate arc handler if needed.
       const t = e.type;
       skippedTypes.set(t, (skippedTypes.get(t) ?? 0) + 1);
+      return;
+    }
+    case 'INSERT': {
+      const ins = e as RawInsert;
+      const pt = POINT(ins.position);
+      if (!pt || typeof ins.name !== 'string' || ins.name.length === 0) {
+        warnings.push({
+          code: 'degenerate_geometry',
+          message: 'INSERT missing block name or position',
+          layer,
+          entityType: 'INSERT',
+        });
+        return;
+      }
+      // Skip degenerate scales (collapsed geometry).
+      const sx = typeof ins.xScale === 'number' && ins.xScale !== 0 ? ins.xScale : 1;
+      const sy = typeof ins.yScale === 'number' && ins.yScale !== 0 ? ins.yScale : 1;
+      inserts.push({
+        blockName: ins.name,
+        position: pt,
+        z: typeof ins.position?.z === 'number' && Number.isFinite(ins.position.z) ? ins.position.z : 0,
+        rotation: typeof ins.rotation === 'number' && Number.isFinite(ins.rotation) ? ins.rotation : 0,
+        xScale: sx,
+        yScale: sy,
+        layer,
+      });
       return;
     }
     default: {

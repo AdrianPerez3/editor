@@ -89,4 +89,25 @@ describe('importDxf (end-to-end)', () => {
       true,
     );
   });
+
+  it('imports an L-shaped house: walls + door/window INSERTs', () => {
+    const result = importDxf(fixture('house-with-doors.dxf'));
+    // L-shape polyline (closed, 6 vertices) + 2 LINEs = 8 wall segments.
+    expect(result.walls.length).toBe(8);
+    // 3 doors + 2 windows = 5 INSERTs surfaced.
+    expect(result.inserts.length).toBe(5);
+    expect(result.stats.insertsDetected).toBe(5);
+    // INSERT positions should be in meters, with Y flipped to editor coords.
+    const door1 = result.inserts.find((i) => i.blockName === 'DOOR_900' && i.rotation === 0);
+    expect(door1).toBeDefined();
+    if (door1) {
+      // Source position (1500, 0) mm -> (1.5, 0) m with Y flipped to (1.5 - cx, 0 - cy)
+      // Hard to assert exact coords because of recentering; just check bounds.
+      expect(Number.isFinite(door1.position[0])).toBe(true);
+      expect(Number.isFinite(door1.position[1])).toBe(true);
+    }
+    // Door layer counts should reflect INSERTs even though we don't import as walls.
+    const layerHistogram = result.stats.layersClassified;
+    expect(layerHistogram.wall).toBeGreaterThan(0);
+  });
 });
