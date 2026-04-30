@@ -20,6 +20,7 @@ import {
 import { Switch } from './../../../../../components/ui/primitives/switch'
 import useEditor, { selectDefaultBuildingAndLevel } from './../../../../../store/use-editor'
 import { AudioSettingsDialog } from './audio-settings-dialog'
+import { DxfImportButton } from './dxf-import-button'
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
 
 type SceneNode = Record<string, unknown> & {
@@ -380,6 +381,8 @@ export function SettingsPanel({
           ref={fileInputRef}
           type="file"
         />
+
+        <DxfImportButton />
       </div>
 
       {/* Audio Section */}

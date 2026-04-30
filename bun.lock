@@ -18,6 +18,7 @@
       "dependencies": {
         "@number-flow/react": "^0.5.14",
         "@pascal-app/core": "*",
+        "@pascal-app/dxf-importer": "*",
         "@pascal-app/editor": "*",
         "@pascal-app/viewer": "*",
         "@react-three/drei": "^10.7.7",
@@ -92,6 +93,7 @@
       "dependencies": {
         "@iconify/react": "^6.0.2",
         "@number-flow/react": "^0.5.14",
+        "@pascal-app/dxf-importer": "*",
         "@radix-ui/react-alert-dialog": "^1.1.15",
         "@radix-ui/react-context-menu": "^2.2.16",
         "@radix-ui/react-dialog": "^1.1.15",

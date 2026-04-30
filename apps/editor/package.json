@@ -13,6 +13,7 @@
   "dependencies": {
     "@number-flow/react": "^0.5.14",
     "@pascal-app/core": "*",
+    "@pascal-app/dxf-importer": "*",
     "@pascal-app/editor": "*",
     "@pascal-app/viewer": "*",
     "@react-three/drei": "^10.7.7",

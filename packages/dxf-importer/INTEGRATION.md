@@ -1,9 +1,28 @@
 # Integration guide
 
-How to wire `@pascal-app/dxf-importer` into the Pascal editor app. This file
-documents the recommended approach. The actual UI components are intentionally
-left for a follow-up PR — landing them needs UX iteration that benefits from
-maintainer review.
+How to wire `@pascal-app/dxf-importer` into the Pascal editor app.
+
+## Status (April 2026)
+
+A minimal integration is now wired into the editor. Status:
+
+- **Wired:** an "Import DXF / DWG" button in the Settings panel
+  (`packages/editor/src/components/ui/sidebar/panels/settings-panel/dxf-import-button.tsx`)
+  that handles file picking, DWG sniffing, DXF parsing, WallNode creation, and
+  atomic-undo grouping via `useScene.temporal.pause()/resume()`.
+- **Verified:** TypeScript check-types adds zero new errors; the
+  `@pascal-app/dxf-importer` package has 103 unit tests passing.
+- **NOT verified in browser:** the file picker, the success/error inline
+  status, the actual visual result of imported walls, the Cmd+Z grouping,
+  and large-file performance. These need browser-based smoke testing before
+  shipping.
+- **Deferred to follow-ups:**
+  - Layer-mapping table UI (today the importer auto-classifies via regex).
+  - Toast library (`sonner`) — the current integration uses inline status text.
+  - Web Worker for >5 MB DXFs.
+  - 2D underlay rendering of `result.underlay` lines as a `GuideNode`.
+  - Door / window placement on walls.
+  - Multi-floor detection (Z-clustering, sibling-file scan).
 
 ## DWG handling (issue #158)
 
