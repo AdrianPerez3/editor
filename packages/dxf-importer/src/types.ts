@@ -67,7 +67,7 @@ export interface ImportStats {
   layersDetected: number;
   layersClassified: Record<LayerConcept, number>;
   unit: DxfUnit;
-  unitSource: 'header' | 'heuristic' | 'user';
+  unitSource: 'header' | 'measurement' | 'heuristic' | 'user';
   scaleToMeters: number;
   bbox: { min: Point2D; max: Point2D } | null;
 }
@@ -91,7 +91,7 @@ export interface ImportResult {
 }
 
 export const DEFAULT_OPTIONS: Required<ImportOptions> = {
-  defaultWallHeight: 2.4,
+  defaultWallHeight: 2.5,
   defaultWallThickness: 0.1,
   defaultMaterialPreset: 'preset-white',
   unitOverride: 'unitless',

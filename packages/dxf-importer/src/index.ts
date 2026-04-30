@@ -5,7 +5,17 @@ export {
   inferUnitFromBbox,
   metersPerUnit,
   unitFromInsunits,
+  unitFromMeasurement,
 } from './units.js';
+export {
+  detectFileFormat,
+  assertNotDwg,
+  checkForDwg,
+  dwgGuidanceMessage,
+  UnsupportedDwgError,
+  type FileFormat,
+  type FormatDetection,
+} from './dwg-guard.js';
 export {
   DEFAULT_OPTIONS,
   type DxfUnit,

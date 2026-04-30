@@ -19,6 +19,13 @@ export function unitFromInsunits(code: number | undefined): DxfUnit {
   return INSUNITS_TABLE[code]?.unit ?? 'unitless';
 }
 
+/** $MEASUREMENT fallback (DXF group code 70 in HEADER): 0 = English (inches), 1 = Metric (mm). */
+export function unitFromMeasurement(code: number | undefined): DxfUnit {
+  if (code === 0) return 'in';
+  if (code === 1) return 'mm';
+  return 'unitless';
+}
+
 export function metersPerUnit(unit: DxfUnit): number {
   switch (unit) {
     case 'in':

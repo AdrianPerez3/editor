@@ -5,6 +5,46 @@ documents the recommended approach. The actual UI components are intentionally
 left for a follow-up PR — landing them needs UX iteration that benefits from
 maintainer review.
 
+## DWG handling (issue #158)
+
+- v1: client-side `detectFileFormat` + `assertNotDwg` reject `.dwg` uploads
+  with a friendly modal linking to
+  https://www.opendesign.com/guestfiles/oda_file_converter (free, ODA's
+  "guest" download).
+- v1.1 (when DWG volume justifies): server-side conversion via CloudConvert
+  REST (~$0.02/conversion, clean license posture, no infra) — call from a
+  Next.js API route, then feed the resulting DXF to `importDxf()`.
+  Aspose.CAD Cloud is the alternative if CAD fidelity is the priority.
+- Avoid: bundling LibreDWG WASM in the browser (GPL-3.0 contagion), bundling
+  ODA File Converter binary in Docker (EULA does not grant SaaS rights).
+
+Rejection flow at the file-upload handler:
+
+```ts
+import {
+  assertNotDwg,
+  dwgGuidanceMessage,
+  UnsupportedDwgError,
+  importDxf,
+} from '@pascal-app/dxf-importer';
+
+async function handleUpload(file: File) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  try {
+    assertNotDwg(bytes);
+  } catch (e) {
+    if (e instanceof UnsupportedDwgError) {
+      // show modal with dwgGuidanceMessage(), then bail
+      return;
+    }
+    throw e;
+  }
+  const text = new TextDecoder().decode(bytes);
+  const result = importDxf(text);
+  // ...continue with WallSpec -> WallNode below
+}
+```
+
 ## 1. Add the dependency
 
 In `apps/editor/package.json`:

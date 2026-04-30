@@ -13,12 +13,14 @@ Addresses [pascalorg/editor#158](https://github.com/pascalorg/editor/issues/158)
 - Maps wall-layer line/polyline segments to `WallSpec` objects ready for the editor scene
 - Routes non-wall entities to a 2D underlay channel
 - Recenters geometry around origin and converts DXF (Z-up) to editor (Y-up XZ-plane)
+- Detects DWG (binary AutoCAD) uploads and rejects them with a guidance message pointing to free conversion tools.
 
 ## What this package does **not** do
 
-- DWG (binary AutoCAD) — DWG support requires a server-side conversion step
-  (ODA File Converter) or a GPL-licensed WASM port that is incompatible with
-  closed-source distribution. See `pascalorg/editor#158` discussion.
+- DWG (binary AutoCAD) — detected and rejected with guidance. Server-side
+  conversion (ODA / Aspose.CAD Cloud / CloudConvert) is documented in
+  INTEGRATION.md as a follow-up phase. There is no permissive-license JS DWG
+  parser as of 2026.
 - Door / window placement on walls. v1 emits walls only; door INSERT blocks
   fall through to the 2D underlay until the door-attachment heuristic ships.
 - `SPLINE`, `HATCH`, `DIMENSION` entities — these are counted as
@@ -47,6 +49,30 @@ const result = importDxf(text, {
 The caller is responsible for translating `WallSpec` into editor `WallNode`
 instances and dispatching them via `useScene.createNodes(...)` inside a single
 `temporal.pause()/resume()` block so the import is one undo step.
+
+To reject DWG uploads early with a friendly message:
+
+```ts
+import { assertNotDwg, dwgGuidanceMessage } from '@pascal-app/dxf-importer';
+try {
+  assertNotDwg(fileBytes);
+} catch (e) {
+  // show modal with dwgGuidanceMessage()
+}
+```
+
+## Layer-classifier coverage
+
+The classifier recognizes wall layers across these convention families:
+
+- AIA (American Institute of Architects) — `A-WALL`, `A-WALL-EXTR`, etc.
+- Generic English — `WALL`, `WALLS`, `INTERIOR-WALL`
+- Italian — `MURO`, `MURI`, `PARETE`, `PARETI`
+- German Allplan — `WAND`, `WAENDE`, Allplan layer prefixes
+- French / AFNOR — `MUR`, `MURS`, `CLOISON`
+- Spanish — `MURO`, `MUROS`, `PARED`, `PAREDES`
+- Japanese SXF — `KABE`, `壁`
+- Chinese — `墙`, `牆`
 
 ## Test fixtures
 

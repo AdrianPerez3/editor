@@ -1,5 +1,10 @@
 import { parseDxfText } from './parse.js';
-import { inferUnitFromBbox, metersPerUnit, unitFromInsunits } from './units.js';
+import {
+  inferUnitFromBbox,
+  metersPerUnit,
+  unitFromInsunits,
+  unitFromMeasurement,
+} from './units.js';
 import {
   DEFAULT_OPTIONS,
   type DxfUnit,
@@ -13,12 +18,19 @@ import { mapSegmentsToWalls } from './walls.js';
  * Import a DXF file's text contents. Pure function: parse + classify + map +
  * unit-resolve. The caller is responsible for converting `WallSpec[]` to
  * editor `WallNode` instances and dispatching them via `useScene.createNodes`.
+ *
+ * Unit resolution priority (highest to lowest):
+ *   1. user override (`opts.unitOverride`)
+ *   2. `$INSUNITS` header
+ *   3. `$MEASUREMENT` fallback (FreeCAD's heuristic) — used when `$INSUNITS`
+ *      is 0/missing. 0 = English (inches), 1 = Metric (mm).
+ *   4. bbox heuristic (mm/cm/m guess from drawing extents)
+ *   5. unitless (1:1) with a warning
  */
 export function importDxf(text: string, opts: ImportOptions = {}): ImportResult {
   const options: Required<ImportOptions> = { ...DEFAULT_OPTIONS, ...opts };
   const parsed = parseDxfText(text);
 
-  // Resolve units. Priority: explicit override > $INSUNITS header > bbox heuristic.
   let unit: DxfUnit;
   let unitSource: ImportStats['unitSource'];
   if (opts.unitOverride && opts.unitOverride !== 'unitless') {
@@ -30,30 +42,41 @@ export function importDxf(text: string, opts: ImportOptions = {}): ImportResult 
       unit = fromHeader;
       unitSource = 'header';
     } else {
-      // Compute bbox in source units, then guess.
-      let minX = Number.POSITIVE_INFINITY;
-      let minY = Number.POSITIVE_INFINITY;
-      let maxX = Number.NEGATIVE_INFINITY;
-      let maxY = Number.NEGATIVE_INFINITY;
-      for (const s of parsed.segments) {
-        if (s.start[0] < minX) minX = s.start[0];
-        if (s.start[1] < minY) minY = s.start[1];
-        if (s.end[0] > maxX) maxX = s.end[0];
-        if (s.end[1] > maxY) maxY = s.end[1];
-      }
-      const bbox =
-        Number.isFinite(minX) && Number.isFinite(maxX)
-          ? { min: [minX, minY] as [number, number], max: [maxX, maxY] as [number, number] }
-          : null;
-      const inferred = inferUnitFromBbox(bbox);
-      unit = inferred;
-      unitSource = inferred === 'unitless' ? 'header' : 'heuristic';
-      if (inferred === 'unitless') {
+      const fromMeasurement = unitFromMeasurement(parsed.measurement);
+      if (fromMeasurement !== 'unitless') {
+        unit = fromMeasurement;
+        unitSource = 'measurement';
         parsed.warnings.push({
           code: 'unit_unspecified',
           message:
-            'DXF $INSUNITS is 0/missing and bounding box is empty; assuming unitless (1:1).',
+            'Unit inferred from $MEASUREMENT (English/Metric flag) since $INSUNITS was 0/missing.',
         });
+      } else {
+        // Compute bbox in source units, then guess.
+        let minX = Number.POSITIVE_INFINITY;
+        let minY = Number.POSITIVE_INFINITY;
+        let maxX = Number.NEGATIVE_INFINITY;
+        let maxY = Number.NEGATIVE_INFINITY;
+        for (const s of parsed.segments) {
+          if (s.start[0] < minX) minX = s.start[0];
+          if (s.start[1] < minY) minY = s.start[1];
+          if (s.end[0] > maxX) maxX = s.end[0];
+          if (s.end[1] > maxY) maxY = s.end[1];
+        }
+        const bbox =
+          Number.isFinite(minX) && Number.isFinite(maxX)
+            ? { min: [minX, minY] as [number, number], max: [maxX, maxY] as [number, number] }
+            : null;
+        const inferred = inferUnitFromBbox(bbox);
+        unit = inferred;
+        unitSource = inferred === 'unitless' ? 'header' : 'heuristic';
+        if (inferred === 'unitless') {
+          parsed.warnings.push({
+            code: 'unit_unspecified',
+            message:
+              'DXF $INSUNITS is 0/missing and bounding box is empty; assuming unitless (1:1).',
+          });
+        }
       }
     }
   }

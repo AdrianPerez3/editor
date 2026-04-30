@@ -18,7 +18,7 @@ describe('mapSegmentsToWalls', () => {
     const w = r.walls[0];
     if (!w) throw new Error('expected wall');
     expect(w.thickness).toBe(0.1);
-    expect(w.height).toBe(2.4);
+    expect(w.height).toBe(2.5);
     expect(w.materialPreset).toBe('preset-white');
     expect(w.sourceLayer).toBe('A-WALL');
   });

@@ -3,6 +3,7 @@ import {
   inferUnitFromBbox,
   metersPerUnit,
   unitFromInsunits,
+  unitFromMeasurement,
 } from '../src/units.js';
 
 describe('unitFromInsunits', () => {
@@ -19,6 +20,24 @@ describe('unitFromInsunits', () => {
   it('falls back to unitless for unknown codes', () => {
     expect(unitFromInsunits(999)).toBe('unitless');
     expect(unitFromInsunits(undefined)).toBe('unitless');
+  });
+});
+
+describe('unitFromMeasurement', () => {
+  it('maps 0 to inches (English)', () => {
+    expect(unitFromMeasurement(0)).toBe('in');
+  });
+
+  it('maps 1 to millimeters (Metric)', () => {
+    expect(unitFromMeasurement(1)).toBe('mm');
+  });
+
+  it('returns unitless for undefined', () => {
+    expect(unitFromMeasurement(undefined)).toBe('unitless');
+  });
+
+  it('returns unitless for unknown codes', () => {
+    expect(unitFromMeasurement(99)).toBe('unitless');
   });
 });
 

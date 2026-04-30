@@ -25,6 +25,7 @@ export interface ParsedSegment {
 
 export interface ParsedDxf {
   units: number;
+  measurement: number | undefined;
   layers: Map<string, ParsedLayer>;
   segments: ParsedSegment[];
   warnings: ImportWarning[];
@@ -97,6 +98,7 @@ export function parseDxfText(text: string): ParsedDxf {
     const message = err instanceof Error ? err.message : String(err);
     return {
       units: 0,
+      measurement: undefined,
       layers: new Map(),
       segments: [],
       warnings: [{ code: 'parse_error', message }],
@@ -129,6 +131,7 @@ export function parseDxfText(text: string): ParsedDxf {
 
   return {
     units: raw.header?.$INSUNITS ?? 0,
+    measurement: raw.header?.$MEASUREMENT,
     layers,
     segments,
     warnings,

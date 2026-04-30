@@ -69,4 +69,24 @@ describe('importDxf (end-to-end)', () => {
     expect(dx).toBeCloseTo(4, 3);
     expect(dy).toBeCloseTo(3, 3);
   });
+
+  it('falls back to mm via $MEASUREMENT=1 when $INSUNITS is 0', () => {
+    const result = importDxf(fixture('units-measurement-metric.dxf'));
+    expect(result.stats.unit).toBe('mm');
+    expect(result.stats.unitSource).toBe('measurement');
+    expect(result.stats.scaleToMeters).toBeCloseTo(0.001, 9);
+    expect(result.warnings.some((w) => w.message.includes('inferred from $MEASUREMENT'))).toBe(
+      true,
+    );
+  });
+
+  it('falls back to inches via $MEASUREMENT=0 when $INSUNITS is 0', () => {
+    const result = importDxf(fixture('units-measurement-imperial.dxf'));
+    expect(result.stats.unit).toBe('in');
+    expect(result.stats.unitSource).toBe('measurement');
+    expect(result.stats.scaleToMeters).toBeCloseTo(0.0254, 9);
+    expect(result.warnings.some((w) => w.message.includes('inferred from $MEASUREMENT'))).toBe(
+      true,
+    );
+  });
 });
